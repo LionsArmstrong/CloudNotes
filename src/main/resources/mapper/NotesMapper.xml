@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+
+<mapper namespace="com.example.demo.mapper.INotesMapper">
+
+    <resultMap type="com.example.demo.entity.notes.Notes" id="NotesResultMap">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="userid" property="userid" jdbcType="INTEGER"/>
+        <result column="text" property="text" jdbcType="VARCHAR"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+    </resultMap>
+    <select id="queryNotesByUserId"  resultMap="NotesResultMap" resultType="list" parameterType="com.example.demo.entity.user.User">
+        SELECT * FROM T_NOTES WHERE USERID=#{id} AND ISDELETE=0
+        <if test="userName!=null and userName!=''">
+            and ntitle like '%${userName}%'
+        </if>
+    </select>
+    <select id="queryNotesByNotiesId"  resultMap="NotesResultMap" resultType="com.example.demo.entity.notes.Notes" parameterType="com.example.demo.entity.notes.Notes">
+        SELECT * FROM T_NOTES WHERE ID=#{id} AND ISDELETE=0
+    </select>
+    <insert id="insertNotes" parameterType="com.example.demo.entity.notes.Notes">
+        INSERT INTO T_NOTES (userID,ntext,ntitle) VALUES(#{userid},#{ntext},#{ntitle})
+        <
+</insert>
+    <update id="updateNotesByNotiesId" parameterType="com.example.demo.entity.notes.Notes">
+        UPDATE t_notes SET ntext=#{ntext},ntitle=#{ntitle}  WHERE id=#{id}
+    </update>
+    <update id="deleteNotiesByNotiesId" parameterType="com.example.demo.entity.notes.Notes">
+        UPDATE t_notes SET ISDELETE=1  WHERE id=#{id}
+    </update>
+
+</mapper>

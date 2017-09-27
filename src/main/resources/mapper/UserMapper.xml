@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.mapper.IUserMapper">
+    <resultMap type="com.example.demo.entity.user.User" id="UserResultMap">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="username" property="userName" jdbcType="VARCHAR"/>
+        <result column="userpass" property="userPass" jdbcType="VARCHAR"/>
+    </resultMap>
+    <select id="loginUserByNamePass"  resultMap="UserResultMap" resultType="com.example.demo.entity.user.User" parameterType="com.example.demo.entity.user.User">
+        SELECT * FROM T_USER WHERE USERNAME=#{userName} AND USERPASS=#{userPass}
+    </select>
+    <insert id="insertUser" parameterType="com.example.demo.entity.user.User">
+        INSERT INTO T_USER (username,userpass) VALUES(#{userName},#{userPass})
+    </insert>
+    <update id="changePasswordByUserId" parameterType="com.example.demo.entity.user.User">
+        UPDATE t_user SET userpass=#{userPass}  WHERE id=#{id}
+    </update>
+    <!--
+    <delete id="deleteEmployeList" parameterType="List">
+        DELETE FROM T_EMPLOYEE WHERE ID IN(
+        <foreach collection="list" item="entity" separator=",">
+            #{entity}
+        </foreach>
+        )
+    </delete>
+    -->
+</mapper>

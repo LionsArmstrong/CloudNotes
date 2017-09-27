@@ -1,0 +1,598 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8"/>
+	<title>我的笔记</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<meta http-equiv="x-pjax-version" content="v173"/>
+	<link rel="apple-touch-icon-precomposed" sizes="144x144"
+		  href="ico/favico-144-precomposed.png"/>
+	<link rel="apple-touch-icon-precomposed" sizes="114x114"
+		  href="ico/favico-114-precomposed.png"/>
+	<link rel="apple-touch-icon-precomposed" sizes="72x72"
+		  href="ico/favico-72-precomposed.png"/>
+	<link rel="apple-touch-icon-precomposed"
+		  href="ico/favico-57-precomposed.png"/>
+	<link rel="shortcut icon" href="ico/favico.png"/>
+	<link rel="shortcut icon" href="ico/favico.ico"/>
+	<link rel="stylesheet" href="styles/icon.css" />
+	<link rel="stylesheet" href="styles/main.css" />
+	<!-- Google-Code代码高亮CSS -->
+	<link rel="stylesheet" href="styles/prettify.css" />>
+	<!-- Ueditor编辑器CSS -->
+	<link href="styles/umeditor.min.css" type="text/css" rel="stylesheet"/>
+	<script type="text/javascript" src="scripts/basevalue.js"></script>
+	<script type="text/javascript" src="scripts/cookie_util.js"></script>
+	<script type="text/javascript" src="scripts/jquery.min.js"></script>
+	<script type="text/javascript" src="scripts/book.js"></script>
+	<script type="text/javascript" src="scripts/share.js"></script>
+	<script type="text/javascript" src="scripts/note.js"></script>
+	<script type="text/javascript" src="scripts/notebody.js"></script>
+	<script type="text/javascript" src="scripts/updatenote.js"></script>
+	<script type="text/javascript" src="scripts/alert.js"></script>
+	<script type="text/javascript" src="scripts/recycle.js"></script>
+	<script type="text/javascript" src="scripts/login.js" ></script>
+	<script type="text/javascript">
+        $(function(){
+            ajx();
+            //上拉下拉菜单
+            $(".contact-body").on('click','.btn_slide_down',function(){
+                console.log($(this));
+                var $menu = $(this).parent().next(".note_menu");
+                console.log($menu);
+				$menu.slideToggle();
+            });
+
+            //修改笔记
+            $(".contact-body").on('click','.checked',function(){
+                console.log("修改笔记");
+                var id =$(this).closest(".online").find(".hiddenid").val();
+                console.log("hiddenid:"+id);
+                $.ajax({
+                    url:'toupdateNotes.do',
+                    data:'id='+id,
+                    type:'post',
+                    success:function(data){
+                        var s=JSON.parse(data);
+                        console.log(s);
+                        $("#myEditor").html(s[0].ntext);
+                       $("#input_note_title").val(s[0].ntitle);
+                        $("#save_note").next(".hiddenid").val(s[0].id);
+                    }
+                });
+            });
+
+            //删除笔记
+            $(".contact-body").on('click','.btn_delete',function(){
+                console.log("删除笔记");
+                var id =$(this).closest(".online").find(".hiddenid").val();
+                console.log("删除笔记id:"+id);
+                $.ajax({
+                    url:'doDeleteNotes.do',
+                    data:'id='+id,
+                    type:'post',
+                    success:function(data){
+                        if(data=="true"){
+                            $("#note_ul").append("<p>删除成功</p>");
+                            emptyNote();
+                            ajx();
+                        }else{
+                            $("#note_ul").append("<p>删除失败</p>");
+                            //emptyNote();
+                            ajx();
+                        }
+                    }
+                });
+            });
+
+            //鼠标离开菜单收回
+			$(".contact-body").on('mouseleave','.online',function(){
+                var $menu = $(this).find(".note_menu");
+                $menu.slideUp();
+            });
+
+			//保存菜单按钮，添加或者保存修改
+            $("#save_note").click(function(){
+                var noteText=$("#myEditor").html();
+                var noteTitle=$("#input_note_title").val();
+                var id=$(this).next(".hiddenid").val();
+                if(id==""||id==null){
+                    console.log("添加新笔记。。。。。"+id);
+                    $.ajax({
+                        url:'AddNotesById.do',
+                        data:{ntext: noteText ,ntitle: noteTitle},
+                        type:'post',
+                        dataType:'json',
+                        success:function(data){
+                            if(data==true){
+                                $("#note_ul").append("<p>添加成功</p>");
+                                ajx();
+                            }else if (data==Ntitleisnull){
+                                $("#note_ul").append("<p>Ntitle is null</p>");
+                            }else if (data==Ntextisnull){
+                                $("#note_ul").append("<p>Ntext is null</p>");
+                            }else{
+                                $("#note_ul").append("<p>添加失败</p>");
+                            }
+
+                        }
+                    });
+				}else{
+                    console.log("保存修改的笔记ID:"+id);
+                    $.ajax({
+                        url:'doupdateNotes.do',
+                        data:{id:id,ntext: noteText ,ntitle: noteTitle},
+                        type:'post',
+                        dataType:'json',
+                        success:function(data){
+                            if(data==true){//dataType为json格式时，会自动匹配true否则要用data=="true"来判断
+                                $("#note_ul").append("<p>保存成功</p>");
+                                ajx();
+                            }else{
+                                $("#note_ul").append("<p>保存失败</p>");
+                            }
+
+                        }
+                    });
+				}
+
+            });
+
+            //添加新笔记按钮，调用制空方法。
+            $("#add_note").click(function(){
+                emptyNote();
+                console.log("添加新的笔记ID...");
+            });
+
+            //制空方法，使编辑笔记制空
+            function emptyNote(){
+                $("#myEditor").html("");
+                $("#input_note_title").val("");
+                $("#save_note").next(".hiddenid").val("");
+			}
+
+			//加载我的笔记的方法。
+			function ajx(){
+			//alert("开始执行ajax");
+				$.ajax({
+					url:'queryNotes.do',
+					data:'',
+					type:'post',
+					success:function(data){
+						var s=JSON.parse(data);
+                        console.log(s);
+                        var i=s.length;
+                        $("#note_ul").empty();
+						while(i){
+                            $("#note_ul").append("<li class='online'><a class='checked'><i class='fa fa-file-text-o' title='online' rel='tooltip-bottom'></i>"+
+								s[s.length-i].ntitle+
+								"<input type='hidden' class='hiddenid' value='" +s[s.length-i].id+
+								"'/><button type='button' class='btn btn-default btn-xs btn_position btn_slide_down'><i class='fa fa-chevron-down'></i>"+
+                                "</button></a><div class='note_menu' tabindex='-1'><dl><dt>"+
+                                "<button type='button' class='btn btn-default btn-xs btn_move' title='移动至...'>"+
+                                "<i class='fa fa-random'></i></button></dt><dt>"+
+                                "<button type='button' class='btn btn-default btn-xs btn_share' title='修改'>"+
+                                "<i class='fa fa-sitemap'></i></button></dt><dt><button type='button' class='btn btn-default btn-xs btn_delete' title='删除'><i class='fa fa-times'></i></button></dt></dl></div></li> ");
+                            i=i-1;
+						}
+
+					}
+				});
+			}
+
+			//带参数模糊查询我的笔记
+            function ajxByQname(Qname){
+                $.ajax({
+                    url:'queryNotesByQname.do',
+                    data:{Qname: Qname},
+                    type:'post',
+                    success:function(data){
+                        console.log(data);
+                        //var s=JSON.parse(data);
+                        var s=jQuery.parseJSON(data);
+                        console.log(s);
+                        var i=s.length;
+                        $("#note_ul").empty();
+                        while(i){
+                            $("#note_ul").append("<li class='online'><a class='checked'><i class='fa fa-file-text-o' title='online' rel='tooltip-bottom'></i>"+
+                                s[s.length-i].ntitle+
+                                "<input type='hidden' class='hiddenid' value='" +s[s.length-i].id+
+                                "'/><button type='button' class='btn btn-default btn-xs btn_position btn_slide_down'><i class='fa fa-chevron-down'></i>"+
+                                "</button></a><div class='note_menu' tabindex='-1'><dl><dt>"+
+                                "<button type='button' class='btn btn-default btn-xs btn_move' title='移动至...'>"+
+                                "<i class='fa fa-random'></i></button></dt><dt>"+
+                                "<button type='button' class='btn btn-default btn-xs btn_share' title='修改'>"+
+                                "<i class='fa fa-sitemap'></i></button></dt><dt><button type='button' class='btn btn-default btn-xs btn_delete' title='删除'><i class='fa fa-times'></i></button></dt></dl></div></li> ");
+                            i=i-1;
+                        }
+
+                    }
+                });
+            }
+
+			//查询获得焦点事件
+            $("#search_note").focus(function(){
+                $(window).keydown(function(event) {
+                    if(event.keyCode==13){
+                        ajxByQname($("#search_note").val());
+					}
+                });
+			});
+
+
+        });
+	</script>
+</head>
+<!--/*@thymesVar id="name" type="java.lang.String"*/-->
+
+<body class="animated fadeIn">
+<header class="header">
+	<div class="header-brand">
+		<a data-pjax=".content-body" href="edit.html"> <img
+				class="brand-logo" src="images/dummy/8986f28e.stilearn-logo.png"
+				alt="Stilearn Admin Sample Logo"/>
+		</a>
+	</div>
+	<div class="header-profile">
+		<div class="profile-nav">>
+			<span class="profile-username" th:text="'Hello！, ' + ${USER.userName} + '!'">00</span> <a class="dropdown-toggle"
+																									  data-toggle="dropdown"> <span class="fa fa-angle-down"></span>
+			</a>
+			<ul class="dropdown-menu animated flipInX pull-right" role="menu">
+				<li><a href="toChangepassword.do"><i class="fa fa-user"></i>
+					修改密码</a></li>
+				<li class="divider"></li>
+				<li><a id="logout" href="tologout.do"><i class="fa fa-sign-out"></i>
+					退出登录</a></li>
+			</ul>
+		</div>
+	</div>
+	<form class="form-inline" onsubmit="return false;">
+		<button type="button" class="btn btn-default btn-expand-search">
+			<i class="fa fa-search"></i>
+		</button>
+		<div class="toggle-search">
+			<input type="text" class="form-control" placeholder="搜索笔记"
+				   id='search_note'/>
+			<button type="button" class="btn btn-default btn-collapse-search">
+				<i class="fa fa-times"></i>
+			</button>
+		</div>
+	</form>
+	<ul class="hidden-xs header-menu pull-right">
+		<li><a href="activity.html" target='_blank' title="笔记活动">活动</a>
+		</li>
+	</ul>
+</header>
+
+
+<div class="row" style='padding: 0;' id='center'>
+	<div class="opacity_bg" style='display: none'></div>
+	<div id="can"></div>
+	<div class="col-xs-2" style='padding: 0;' id='pc_part_1'>
+		<div class="pc_top_first">
+			<h3>全部笔记本</h3>
+			<button type="button" class="btn btn-default btn-xs btn_plus"
+					id='add_notebook'>
+				<i class="fa fa-plus"></i>
+			</button>
+		</div>
+		<aside class="side-right" id='first_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list" id="book_ul">
+							<li class="online">
+								<a class='checked'>
+									<i class="fa fa-book" title="online" rel="tooltip-bottom"> </i>
+									默认笔记本
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</aside>
+		<div class="row clear_margin">
+			<div class="col-xs-4 click" id='rollback_button' title='回收站'>
+				<i class='fa fa-trash-o'
+				   style='font-size: 20px; line-height: 31px;'></i>
+			</div>
+			<div class="col-xs-4 click" id='like_button' title='收藏笔记本'>
+				<i class='fa fa-star' style='font-size: 20px; line-height: 31px;'></i>
+			</div>
+			<div class="col-xs-4 click" id='action_button' title='参加活动笔记'>
+				<i class='fa fa-users' style='font-size: 20px; line-height: 30px;'></i>
+			</div>
+		</div>
+	</div>
+	<div class="col-xs-3" style='padding: 0;' id='pc_part_2'>
+		<div class="pc_top_second" id='notebookId'>
+			<h3>我的笔记</h3>
+			<button type="button" class="btn btn-default btn-xs btn_plus"
+					id='add_note'>
+				<i class="fa fa-plus"></i>
+			</button>
+		</div>
+		<aside class="side-right" id='second_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list" id="note_ul">
+							<li class="online"><a class='checked'> <i
+									class="fa fa-file-text-o" title="online" rel="tooltip-bottom"></i>
+								使用Java操作符<input type="hidden" class="hiddenid" value=""/>
+								<button type="button"
+										class="btn btn-default btn-xs btn_position btn_slide_down">
+									<i class="fa fa-chevron-down"></i>
+								</button>
+							</a>
+								<div class="note_menu" tabindex='-1'>
+									<dl>
+										<dt>
+											<button type="button"
+													class="btn btn-default btn-xs btn_move" title='移动至...'>
+												<i class="fa fa-random"></i>
+											</button>
+										</dt>
+										<dt>
+											<button type="button"
+													class="btn btn-default btn-xs btn_share" title='修改'>
+												<i class="fa fa-sitemap"></i>
+											</button>
+										</dt>
+										<dt>
+											<button type="button"
+													class="btn btn-default btn-xs btn_delete" title='删除'>
+												<i class="fa fa-times"></i>
+											</button>
+										</dt>
+									</dl>
+								</div></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-xs-3" style='padding: 0; display: none;'
+		 id='pc_part_4'>
+		<div class="pc_top_second">
+			<h3>回收站笔记</h3>
+		</div>
+		<aside class="side-right" id='four_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list" id="recycle_ul">
+						</ul>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-xs-3" style='padding: 0; display: none;'
+		 id='pc_part_6'>
+		<div class="pc_top_second">
+			<h3>搜索结果</h3>
+		</div>
+		<aside class="side-right" id='sixth_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list" id="search_ul">
+						</ul>
+					</div>
+				</div>
+				<div id='more_note'>更多...</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-xs-3" style='padding: 0; display: none;'
+		 id='pc_part_7'>
+		<div class="pc_top_second">
+			<h3>已收藏笔记</h3>
+		</div>
+		<aside class="side-right" id='seventh_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list">
+						</ul>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-xs-3" style='padding: 0; display: none;'
+		 id='pc_part_8'>
+		<div class="pc_top_second">
+			<h3>参加活动的笔记</h3>
+		</div>
+		<aside class="side-right" id='eighth_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body">
+						<ul class="contacts-list">
+						</ul>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-sm-7" id='pc_part_3'>
+		<div class="pc_top_third">
+			<div class="row">
+				<div class="col-xs-9">
+					<h3>编辑笔记</h3>
+				</div>
+				<div class="col-xs-3">
+					<button type="button" class="btn btn-block btn-sm btn-primary"
+							id='save_note'>保存笔记</button>
+					<input type="hidden" class="hiddenid" value=""/>
+				</div>
+			</div>
+		</div>
+		<aside class="side-right" id='third_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body clear_margin">
+						<div class="row">
+							<div class="col-xs-8">
+								<input type="text" class="form-control" id="input_note_title"
+									   placeholder='笔记标题...'/>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-sm-12 " id="myEditor_id">
+								<script type="text/plain" id="myEditor"
+										style="width: 100%; height: 400px;">
+								</script>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+	<div class="col-sm-7" id='pc_part_5' style='display: none;'>
+		<div class="pc_top_third">
+			<div class="row">
+				<div class="col-xs-9">
+					<h3>预览笔记</h3>
+				</div>
+			</div>
+		</div>
+		<aside class="side-right" id='fifth_side_right'>
+			<div class="module" data-toggle="niceScroll">
+				<div class="chat-contact">
+					<div class="contact-body clear_margin">
+						<h4 id="noput_note_title"></h4>
+						<p></p>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+</div>
+
+
+
+<footer>
+	<p>&copy; 2014 Stilearning</p>
+	<div
+			style='position: absolute; top: 5PX; height: 30px; right: 20px; line-height: 26px; border: 1px solid #0E7D76; display: none; background: #fff'>
+		<strong style='color: #0E7D76; margin: 0 10px;'></strong>
+	</div>
+</footer>
+
+<div class="global" style="display: none">
+	<div class="sig sig_in" tabindex='4' id='zc'>
+		<dl>
+			<dt>
+			<div class='header'>
+				<h3>修改密码</h3>
+			</div>
+			</dt>
+			<dt></dt>
+			<dt>
+			<div class='letter'>
+				原密码:&nbsp;<input type="password" name="" id="last_password"
+								 tabindex='1' />
+				<div class='warning' id='warning_1'>
+					<span>原始密码错误</span>
+				</div>
+			</div>
+			</dt>
+			<dt>
+			<div class='letter'>
+				新密码:&nbsp;<input type="password" name="" id="new_password"
+								 tabindex='2' />
+				<div class='warning' id='warning_2'>
+					<span>新密码长度过短</span>
+				</div>
+			</div>
+			</dt>
+			<dt>
+			<div class='password'>
+				确认新密码:&nbsp;<input type="password" name="" id="final_password"
+								   tabindex='3' />
+				<div class='warning' id='warning_3'>
+					<span>密码输入不一致</span>
+				</div>
+			</div>
+			</dt>
+			<dt>
+			<div>
+				<input type="button" name="" id="changePassword"
+					   value='&nbsp;确&nbsp;定&nbsp;' tabindex='4' /> <input
+					type="button" name="" id="back" value='&nbsp;关&nbsp;闭&nbsp;'
+					tabindex='5' />
+			</div>
+			</dt>
+		</dl>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+    //加载DOM之后处理页面高度
+    function get_dom(e) {
+        return document.getElementById(e);
+    }
+    function set_height() {
+        var pc_height = window.innerHeight;
+        pc_height = pc_height - 132;
+        get_dom('first_side_right').style.height = (pc_height - 31) + 'px';
+        get_dom('second_side_right').style.height = pc_height + 'px';
+        get_dom('four_side_right').style.height = pc_height + 'px';
+        get_dom('sixth_side_right').style.height = pc_height + 'px';
+        get_dom('seventh_side_right').style.height = pc_height + 'px';
+        get_dom('eighth_side_right').style.height = pc_height + 'px';
+        get_dom('third_side_right').style.height = (pc_height - 15) + 'px';
+        get_dom('fifth_side_right').style.height = (pc_height - 15) + 'px';
+    }
+    function myEditorWidth() {
+        var dom = get_dom('third_side_right');
+        var style = dom.currentStyle || window.getComputedStyle(dom, null);
+        get_dom('myEditor').style.width = style.width;
+    }
+    set_height();
+    //改变窗口大小时调整页面尺寸
+    window.onresize = function() {
+        set_height();
+        var width = $('#third_side_right').width() - 35;
+        $('.edui-container,.edui-editor-body').width(width);
+        $('#myEditor').width(width - regist_button20);
+    };
+</script>
+
+<script type="text/javascript" src="scripts/jquery.min.js"></script>
+
+<!-- Bootstrap框架JS -->
+<script src="scripts/bootstrap.min.js"></script>
+<script src="scripts/js-prototype.js"></script>
+<script src="scripts/theme-setup.js"></script>
+<!-- Google-Code代码高亮JS -->
+<script class="re-execute" src="scripts/run_prettify.js"></script>
+<!-- Ueditor编辑器JS -->
+<script type="text/javascript" charset="utf-8"
+		src="scripts/ue/umeditor.config.js"></script>
+<script type="text/javascript" charset="utf-8"
+		src="scripts/ue/umeditor.min.js"></script>
+<script type="text/javascript" src="scripts/ue/lang/zh-cn.js"></script>
+
+<script type="text/javascript">
+    //重写JS原生alert函数
+    window.alert = function(e) {
+        $('#can').load('./alert/alert_error.html', function() {
+            $('#error_info').text(' ' + e);
+            $('.opacity_bg').show();
+        });
+    }
+    //实例化Ueditor编辑器
+    var um = UM.getEditor('myEditor');
+</script>
+
+</body>
+</html>
